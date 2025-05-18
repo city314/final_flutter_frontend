@@ -1,25 +1,19 @@
-# Dockerfile (1 stage)
-FROM node:20-alpine
+# Stage 1: Build Flutter Web
+FROM cirrusci/flutter:3.19.6 AS flutterbuilder
 
-# Cài http-server
-RUN npm install -g http-server
-
-# Tạo thư mục làm việc
 WORKDIR /app
+# Chỉ copy pubspec để tận dụng cache nếu không đổi dependency
+COPY pubspec.yaml pubspec.lock ./
+RUN flutter pub get
 
-# Copy toàn bộ project
+# Copy toàn bộ source và build web
 COPY . .
+RUN flutter build web --release
 
-# Cài Flutter SDK (có thể dùng base image nếu cần)
-RUN wget https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.19.6-stable.tar.xz && \
-    tar xf flutter_linux_3.19.6-stable.tar.xz && \
-    mv flutter /opt/flutter && \
-    /opt/flutter/bin/flutter doctor
+# Stage 2: Serve với nginx
+FROM nginx:1.25.3-alpine
 
-# Build Flutter web
-RUN /opt/flutter/bin/flutter build web
+# Copy toàn bộ kết quả build từ stage trước
+COPY --from=flutterbuilder /app/build/web /usr/share/nginx/html
 
-# Dùng http-server để serve build
-WORKDIR /app/build/web
-EXPOSE 8080
-CMD ["http-server", "-p", "8080"]
+EXPOSE 80
