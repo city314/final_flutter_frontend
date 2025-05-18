@@ -1,7 +1,7 @@
 # client/Dockerfile
 
 # Stage build Flutter
-FROM cirrusci/flutter:3.19.6 AS build
+FROM nginx:1.25.3-alpine
 
 WORKDIR /app
 
