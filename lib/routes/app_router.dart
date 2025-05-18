@@ -59,7 +59,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/order-history/order-detail',
       name: 'order-detail',
-      builder: (context, state) => const OrderDetail(),
+      builder: (context, state) {
+        final orderId = state.extra as String;
+        return OrderDetail(orderId: orderId);
+      },
     ),
     GoRoute(
       path: '/forgot-password/otp',
@@ -120,9 +123,28 @@ final GoRouter appRouter = GoRouter(
       },
     ),
     GoRoute(
-      path: '/orderdone',
-      name: 'orderdone',
-      builder: (context, state) => OrderSuccessPage(),
+      path: '/order-done',
+      name: 'orderDone',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>;
+        return OrderDone(
+          discount: extra['discount'],
+          finalPrice: extra['finalPrice'],
+          orderId: extra['orderId'],
+          shippingFee: extra['shippingFee'],
+          tax: extra['tax'],
+          timeCreate: extra['timeCreate'],
+          selectedItems: extra['selectedItems'],
+          receiverName: extra['receiverName'],
+          phoneNumber: extra['phoneNumber'],
+          email: extra['email'],
+          address: extra['address'],
+          totalPrice: extra['totalPrice'],
+          loyaltyUsed: extra['loyaltyUsed'],
+          voucherDiscount: extra['voucherDiscount'],
+          isVoucherApplied: extra['isVoucherApplied'],
+        );
+      },
     ),
     GoRoute(
       path: '/forgot-password',

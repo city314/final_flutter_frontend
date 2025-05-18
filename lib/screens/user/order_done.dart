@@ -1,44 +1,47 @@
 // Màn hình hiển thị đặt hàng thành công và chi tiết đơn hàng
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../models/order.dart';
 import '../../models/orderDetail.dart';
-class OrderSuccessPage extends StatelessWidget {
-  // final Order order;
-  // final List<OrderDetail> orderDetails;
-  final order = Order(
-    id: 'ORD123456',
-    userId: 'USER987',
-    totalPrice: 100000,
-    loyaltyPointUsed: 500,
-    discount: 5000,
-    tax: 2000,
-    shippingFee: 10000,
-    finalPrice: 106500,
-    status: OrderStatus.complete,
-    timeCreate: DateTime.now(), coupon: 0,
-  );
-  final orderDetails = [
-    OrderDetail(
-      id: 'OD1',
-      orderId: 'ORD123456',
-      productId: 'PRD001',
-      quantity: 2,
-      price: 30000,
-    ),
-    OrderDetail(
-      id: 'OD2',
-      orderId: 'ORD123456',
-      productId: 'PRD002',
-      quantity: 1,
-      price: 40000,
-    ),
-  ];
-  // const OrderSuccessPage({
-  //   Key? key,
-  //   required this.order,
-  //   required this.orderDetails,
-  // }) : super(key: key);
+import '../../models/selectedproduct.dart';
+import '../../utils/format_utils.dart';
+
+class OrderDone extends StatelessWidget {
+  final String orderId;
+  final DateTime timeCreate;
+  final double tax;
+  final double discount;
+  final double shippingFee;
+  final List<SelectedProduct> selectedItems;
+  final String receiverName;
+  final String phoneNumber;
+  final String email;
+  final String address;
+  final double totalPrice;
+  final int loyaltyUsed;
+  final double voucherDiscount;
+  final bool isVoucherApplied;
+  final double finalPrice;
+
+  OrderDone({
+    Key? key,
+    required this.orderId,
+    required this.timeCreate,
+    required this.tax,
+    required this.discount,
+    required this.shippingFee,
+    required this.selectedItems,
+    required this.receiverName,
+    required this.phoneNumber,
+    required this.email,
+    required this.address,
+    required this.totalPrice,
+    required this.loyaltyUsed,
+    required this.voucherDiscount,
+    required this.isVoucherApplied,
+    required this.finalPrice,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -78,18 +81,18 @@ class OrderSuccessPage extends StatelessWidget {
                 padding: const EdgeInsets.all(12),
                 child: Column(
                   children: [
-                    InfoRow(label: 'Mã đơn hàng:', value: order.id ?? '-'),
+                    InfoRow(label: 'Mã đơn hàng:', value: orderId ?? '-'),
                     InfoRow(
                       label: 'Thời gian:',
-                      value: DateFormat('HH:mm dd/MM/yyyy').format(order.timeCreate),
+                      value: DateFormat('HH:mm dd/MM/yyyy').format(timeCreate),
                     ),
-                    InfoRow(label: 'Trạng thái:', value: order.status.toString().split('.').last),
-                    InfoRow(label: 'Tổng tiền hàng:', value: '${order.totalPrice}'),
-                    InfoRow(label: 'Điểm tích luỹ đã dùng:', value: '${order.loyaltyPointUsed}'),
-                    InfoRow(label: 'Chiết khấu:', value: '${order.discount}'),
-                    InfoRow(label: 'Thuế:', value: '${order.tax}'),
-                    InfoRow(label: 'Phí vận chuyển:', value: '${order.shippingFee}'),
-                    InfoRow(label: 'Tổng thanh toán:', value: '${order.finalPrice}'),
+                    InfoRow(label: 'Trạng thái:', value: 'pending'),
+                    InfoRow(label: 'Tổng tiền hàng:', value: formatPrice(totalPrice)),
+                    InfoRow(label: 'Điểm tích luỹ đã dùng:', value: formatPrice(loyaltyUsed.toDouble())),
+                    InfoRow(label: 'Chiết khấu:', value: formatPrice(discount)),
+                    InfoRow(label: 'Thuế:', value: formatPrice(tax)),
+                    InfoRow(label: 'Phí vận chuyển:', value: formatPrice(shippingFee)),
+                    InfoRow(label: 'Tổng thanh toán:', value: formatPrice(finalPrice)),
                   ],
                 ),
               ),
@@ -100,15 +103,15 @@ class OrderSuccessPage extends StatelessWidget {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            ...orderDetails.map((detail) => Card(
+            ...selectedItems.map((detail) => Card(
               margin: const EdgeInsets.symmetric(vertical: 6),
               child: ListTile(
                 leading: CircleAvatar(
                   child: Text('${detail.quantity}x'),
                 ),
-                title: Text('Sản phẩm: ${detail.productId}'),
+                title: Text('Sản phẩm: ${detail.variant.variantName}'),
                 subtitle: Text(
-                  'Đơn giá: ${detail.price}\nThành tiền: ${detail.price*detail.quantity}',
+                  'Đơn giá: ${formatPrice(detail.variant.sellingPrice)}\nThành tiền: ${formatPrice(detail.variant.sellingPrice*detail.quantity)}',
                 ),
               ),
             )),
@@ -116,7 +119,7 @@ class OrderSuccessPage extends StatelessWidget {
             Center(
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.of(context).popUntil((route) => route.isFirst);
+                  context.go('/home');
                 },
                 child: const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),

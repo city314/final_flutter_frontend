@@ -24,6 +24,9 @@ class OrderDetail {
       productId: (json['variant_id'] ?? '') as String,
       quantity: (json['quantity'] ?? 0) as int,
       price: (json['price'] ?? 0).toDouble(), // đảm bảo luôn là num
+      variant: json['variant'] != null
+          ? Variant.fromJson(json['variant'])
+          : null,
     );
   }
 

@@ -1,3 +1,7 @@
+import 'package:cpmad_final/models/orderDetail.dart';
+
+import 'orderstatushistory.dart';
+
 enum OrderStatus { pending, complete, canceled, shipped, paid }
 
 class Order {
@@ -12,6 +16,8 @@ class Order {
   final double finalPrice;
   final OrderStatus status;
   final DateTime timeCreate;
+  List<OrderDetail>? items;
+  final List<OrderStatusHistory>? history;
 
   Order({
     required this.id,
@@ -25,6 +31,8 @@ class Order {
     required this.finalPrice,
     required this.status,
     required this.timeCreate,
+    this.items,
+    this.history,
   });
 
   factory Order.fromJson(Map<String, dynamic> json) {
@@ -40,6 +48,8 @@ class Order {
       finalPrice: (json['final_price'] ?? 0).toDouble(),
       status: _parseStatus(json['status']),
       timeCreate: DateTime.tryParse(json['time_create'] ?? '') ?? DateTime.now(),
+      items: (json['items'] as List?)?.map((e) => OrderDetail.fromJson(e)).toList() ?? [],
+      history: (json['history'] as List?)?.map((e) => OrderStatusHistory.fromJson(e)).toList() ?? [],
     );
   }
 

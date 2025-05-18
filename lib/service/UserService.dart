@@ -356,4 +356,17 @@ class UserService {
     );
     return response.statusCode == 200;
   }
+
+  static Future<bool> updateAvatar(String email, String base64Image) async {
+    print(email);
+    print(base64Image);
+    final url = Uri.parse('$_url/profile/avatar');
+    final response = await http.put(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email, 'avatar': base64Image}),
+    );
+
+    return response.statusCode == 200;
+  }
 }

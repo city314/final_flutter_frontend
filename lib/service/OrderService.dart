@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import '../models/coupon.dart';
 import '../models/order.dart';
 import '../models/orderDetail.dart';
+import '../models/variant.dart';
 
 class OrderService {
   static const String baseUrl = 'http://localhost:3003/api/coupons'; // đổi lại IP nếu chạy thật
@@ -10,6 +11,7 @@ class OrderService {
   static const String _urlOrderDetails = 'http://localhost:3003/api/orderdetails';
   static const String _urlOrderStatus = 'http://localhost:3003/api/order-status';
   static const String _urlCouponUsage = 'http://localhost:3003/api/coupon-usage';
+  static const String _urlVariants = 'http://localhost:3002/api/variants';
 
   /// Lấy danh sách coupon
   static Future<List<Coupon>> fetchAllCoupons() async {
@@ -231,11 +233,76 @@ class OrderService {
 
   Future<List<Order>> fetchUserOrders(String userId) async {
     final response = await http.get(Uri.parse('$_urlOrder/user/$userId'));
+
     if (response.statusCode == 200) {
-      final List<dynamic> jsonData = json.decode(response.body);
-      return jsonData.map((e) => Order.fromJson(e)).toList();
+      final List data = json.decode(response.body);
+      return data.map((e) => Order.fromJson(e)).toList();
     } else {
-      throw Exception('Failed to load orders');
+      throw Exception('Failed to fetch user orders');
     }
+  }
+
+  Future<List<Order>> getOrdersWithVariants(String userId) async {
+    // 1. Gọi đơn hàng
+    final ordersRes = await http.get(Uri.parse('$_urlOrder/user/$userId'));
+    if (ordersRes.statusCode != 200) throw Exception('Lỗi lấy đơn hàng');
+    final ordersJson = json.decode(ordersRes.body) as List;
+    final orders = ordersJson.map((e) => Order.fromJson(e)).toList();
+
+    // 2. Lấy tất cả variant_id duy nhất
+    final allVariantIds = orders
+        .expand((o) => (o.items ?? []).map((i) => i.productId))
+        .toSet()
+        .toList();
+
+    // 3. Gọi variant service
+    final variantRes = await http.get(
+      Uri.parse('$_urlVariants/bulk?ids=${allVariantIds.join(",")}'),
+    );
+    if (variantRes.statusCode != 200) throw Exception('Lỗi lấy variant');
+    final variantJson = json.decode(variantRes.body) as List;
+    final variantMap = {
+      for (var v in variantJson) v['_id']: Variant.fromJson(v)
+    };
+
+    // 4. Gán vào từng orderItem
+    for (var order in orders) {
+      for (var item in order.items ?? []) {
+        item.variant = variantMap[item.productId];
+      }
+    }
+
+    return orders;
+  }
+
+  Future<Order> fetchOrderById(String orderId) async {
+    final res = await http.get(Uri.parse('$_urlOrder/$orderId'));
+    if (res.statusCode != 200) {
+      throw Exception('Không thể lấy dữ liệu đơn hàng');
+    }
+
+    final jsonData = jsonDecode(res.body);
+    final order = Order.fromJson(jsonData);
+
+    // Lấy danh sách variant_id từ items
+    final variantIds = order.items?.map((e) => e.productId).toSet().toList();
+
+    // Gọi API lấy thông tin các variant
+    final variantRes = await http.get(
+      Uri.parse('$_urlVariants/bulk?ids=${variantIds?.join(",")}'),
+    );
+    if (variantRes.statusCode == 200) {
+      final variantJson = jsonDecode(variantRes.body) as List;
+      final variantMap = {
+        for (var v in variantJson) v['_id']: Variant.fromJson(v),
+      };
+
+      // Gán variant vào từng item
+      for (var item in order.items ?? []) {
+        item.variant = variantMap[item.productId];
+      }
+    }
+
+    return order;
   }
 }

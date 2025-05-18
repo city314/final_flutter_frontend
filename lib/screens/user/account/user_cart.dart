@@ -96,21 +96,18 @@ class _UserCartPageState extends State<UserCartPage> {
       backgroundColor: const Color(0xFFEEF9FE),
       appBar: CustomNavbar(
         onHomeTap: () {
-          // TODO: Chuyển tới trang chủ
           context.go('/home');
         },
         onCategoriesTap: () {
-          // TODO: Chuyển tới trang categories
+          context.go('/products');
         },
         onCartTap: () {
-          // TODO: Chuyển tới trang giỏ hàng
           context.go('/account/cart');
         },
         onRegisterTap: () {
-          // TODO: Chuyển tới trang đăng ký
+          context.go('/signup');
         },
         onLoginTap: () {
-          // TODO: Chuyển tới trang đăng nhập
           context.go('/');
         },
         onSupportTap: () {

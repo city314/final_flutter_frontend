@@ -1,4 +1,10 @@
+import 'dart:convert';
+
+import 'package:cpmad_final/pattern/current_user.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../../models/order.dart';
+import '../../service/OrderService.dart';
 import 'CustomNavbar.dart';
 import '../../utils/format_utils.dart';
 
@@ -21,87 +27,23 @@ class _OrderHistoryState extends State<OrderHistory> {
   ];
 
   // Giả lập trạng thái đăng nhập
-  bool isLoggedIn = true; // Đổi thành false để test trường hợp chưa đăng nhập
+  bool isLoggedIn = CurrentUser().isLogin; // Đổi thành false để test trường hợp chưa đăng nhập
 
-  // Dữ liệu mẫu
-  final String userName = 'Mai Nguyễn Phương Trang';
-  final String userPhone = '03*****253';
-  final String userAvatar = 'assets/images/avatar1.png';
-  final int totalOrders = 2;
-  final List<Map<String, dynamic>> orders = [
-    {
-      'image': 'assets/images/product/laptop/acer/acer1.png',
-      'name': 'Tai nghe chụp tai Dareu EH416-Đen',
-      'price': 320000,
-      'status': 'Đã giao hàng',
-      'created': '02/04/2025 16:49',
-    },
-    {
-      'image': 'assets/images/product/mouse.png',
-      'name': 'Chuột Gaming có dây Rapoo VT30-Đen',
-      'price': 480000,
-      'status': 'Đã giao hàng',
-      'created': '28/05/2024 18:20',
-    },
-  ];
+  int totalOrders = 0;
+  late Future<List<Order>> _futureOrders;
+  List<Order> _orders = [];
 
-  void _showRatingDialog(BuildContext context) {
-    int selectedStars = 5;
-    TextEditingController commentController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Đánh giá sản phẩm'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Chọn số sao:'),
-              const SizedBox(height: 8),
-              Row(
-                children: List.generate(5, (index) => IconButton(
-                  icon: Icon(
-                    index < selectedStars ? Icons.star : Icons.star_border,
-                    color: Colors.amber,
-                  ),
-                  onPressed: () {
-                    selectedStars = index + 1;
-                    (context as Element).markNeedsBuild();
-                  },
-                )),
-              ),
-              if (isLoggedIn) ...[
-                const SizedBox(height: 16),
-                const Text('Bình luận của bạn:'),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: commentController,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    hintText: 'Nhập bình luận...'
-                  ),
-                ),
-              ],
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Hủy'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                // TODO: Xử lý lưu đánh giá
-                Navigator.pop(context);
-              },
-              child: const Text('Gửi đánh giá'),
-            ),
-          ],
-        );
-      },
-    );
+  @override
+  void initState() {
+    super.initState();
+    final userId = CurrentUser().email ?? '';
+    _futureOrders = OrderService().getOrdersWithVariants(userId);
+    _futureOrders.then((orders) {
+      setState(() {
+        _orders = orders;
+        totalOrders = orders.length;
+      });
+    });
   }
 
   @override
@@ -192,37 +134,6 @@ class _OrderHistoryState extends State<OrderHistory> {
                       ]
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  // Thông tin user
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        backgroundImage: AssetImage(userAvatar),
-                        radius: 32,
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              userName,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              userPhone,
-                              style: const TextStyle(color: Colors.grey),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
                   const SizedBox(height: 24),
                   // Tổng số lượng đơn
                   Row(
@@ -234,7 +145,7 @@ class _OrderHistoryState extends State<OrderHistory> {
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.04),
+                              color: Colors.black.withOpacity(0.04),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
@@ -313,11 +224,15 @@ class _OrderHistoryState extends State<OrderHistory> {
                   const SizedBox(height: 24),
                   // Danh sách đơn hàng
                   Expanded(
-                    child: ListView.separated(
-                      itemCount: orders.length,
+                    child: _orders.isEmpty
+                        ? const Center(child: CircularProgressIndicator())
+                        : ListView.separated(
+                      itemCount: _filteredOrders.length,
                       separatorBuilder: (context, index) => const SizedBox(height: 16),
                       itemBuilder: (context, index) {
-                        final order = orders[index];
+                        final order = _filteredOrders[index];
+                        final firstItem = order.items!.isNotEmpty ? order.items?.first : null;
+                        final firstImage = firstItem!.variant!.images.isNotEmpty ? firstItem!.variant!.images[0]['base64'] : null;
                         return Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
@@ -325,84 +240,66 @@ class _OrderHistoryState extends State<OrderHistory> {
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.06),
+                                color: Colors.black.withOpacity(0.06),
                                 blurRadius: 6,
                                 offset: const Offset(0, 2),
                               ),
                             ],
                           ),
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.asset(
-                                    order['image'],
-                                    width: 72,
-                                    height: 72,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                SizedBox(
-                                  width: 120,
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        order['name'],
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        formatPrice(order['price'].toDouble()),
-                                        style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 15),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              firstImage != null
+                                  ? Image.memory(base64Decode(firstImage), width: 40, height: 40, fit: BoxFit.cover)
+                                  : const Icon(Icons.image, size: 40),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(order['created'], style: const TextStyle(color: Colors.grey, fontSize: 13)),
-                                    const SizedBox(height: 24),
-                                    Row(
-                                      children: [
-                                        ElevatedButton(
-                                          onPressed: () {},
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.white,
-                                            foregroundColor: Colors.red,
-                                            side: const BorderSide(color: Colors.red),
-                                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                          ),
-                                          child: const Text('Xem chi tiết', style: TextStyle(fontWeight: FontWeight.bold)),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        ElevatedButton(
-                                          onPressed: () {
-                                            _showRatingDialog(context);
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.green,
-                                            foregroundColor: Colors.white,
-                                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                          ),
-                                          child: const Text('Đánh giá', style: TextStyle(fontWeight: FontWeight.bold)),
-                                        ),
-                                      ],
+                                    Text(
+                                      firstItem?.variant?.variantName ?? 'Sản phẩm ẩn',
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      formatPrice(order.finalPrice),
+                                      style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 15),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Trạng thái: ${_parseStatus(order.status)}',
+                                      style: const TextStyle(color: Colors.grey),
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
+                              ),
+                              Column(
+                                children: [
+                                  Text(
+                                    order.timeCreate.toLocal().toString().split(' ')[0],
+                                    style: const TextStyle(color: Colors.grey, fontSize: 13),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      // TODO: điều hướng sang trang chi tiết nếu cần
+                                      context.goNamed('order-detail', extra: order.id);
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.white,
+                                      foregroundColor: Colors.red,
+                                      side: const BorderSide(color: Colors.red),
+                                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    ),
+                                    child: const Text('Xem chi tiết', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         );
                       },
@@ -416,6 +313,38 @@ class _OrderHistoryState extends State<OrderHistory> {
       ),
       backgroundColor: const Color(0xFFF5F6FA),
     );
+  }
+
+  List<Order> get _filteredOrders {
+    if (_selectedTab == 0) return _orders;
+
+    final statusMapping = {
+      1: OrderStatus.pending,
+      2: OrderStatus.paid,
+      3: OrderStatus.shipped,
+      4: OrderStatus.complete,
+      5: OrderStatus.canceled,
+    };
+
+    final selectedStatus = statusMapping[_selectedTab];
+    return _orders.where((o) => o.status == selectedStatus).toList();
+  }
+
+  String _parseStatus(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.pending:
+        return 'Chờ xác nhận';
+      case OrderStatus.paid:
+        return 'Đã thanh toán';
+      case OrderStatus.shipped:
+        return 'Đang vận chuyển';
+      case OrderStatus.complete:
+        return 'Đã giao hàng';
+      case OrderStatus.canceled:
+        return 'Đã hủy';
+      default:
+        return 'Không rõ';
+    }
   }
 
   Widget _buildMenuItem(IconData icon, String title, bool selected, VoidCallback onTap) {
@@ -448,4 +377,4 @@ class _OrderHistoryState extends State<OrderHistory> {
       ),
     );
   }
-} 
+}

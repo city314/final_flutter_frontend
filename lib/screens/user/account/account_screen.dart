@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:cpmad_final/pattern/current_user.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'edit_profile_screen.dart';
 import 'manage_addresses_screen.dart';
 import 'package:cpmad_final/service/UserService.dart';
@@ -63,7 +66,7 @@ class _AccountScreenState  extends State<AccountScreen> {
                         flex: 2,
                         child: Column(
                           children: [
-                            _buildProfileCard(context, userInfo),
+                            _buildProfileCard(context, userInfo, _loadUserInfo),
                           ],
                         ),
                       ),
@@ -74,7 +77,7 @@ class _AccountScreenState  extends State<AccountScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildOptions(context),
+                            _buildOptions(context, userInfo),
                           ],
                         ),
                       ),
@@ -82,9 +85,9 @@ class _AccountScreenState  extends State<AccountScreen> {
                   )
                       : Column(
                     children: [
-                      _buildProfileCard(context, userInfo),
+                      _buildProfileCard(context, userInfo, _loadUserInfo),
                       const SizedBox(height: 24),
-                      _buildOptions(context),
+                      _buildOptions(context, userInfo),
                     ],
                   ),
                 ],
@@ -97,7 +100,7 @@ class _AccountScreenState  extends State<AccountScreen> {
   }
 }
 // Profile Card
-Widget _buildProfileCard(BuildContext context, Map<String, dynamic>? userInfo) {
+Widget _buildProfileCard(BuildContext context, Map<String, dynamic>? userInfo, VoidCallback reloadUserInfo) {
   final name = userInfo!['name'] ?? '---';
   final email = userInfo!['email'] ?? '---';
   final role = userInfo!['role'] == 'admin' ? 'Quản trị viên' : 'Khách hàng';
@@ -115,9 +118,33 @@ Widget _buildProfileCard(BuildContext context, Map<String, dynamic>? userInfo) {
           Center(
             child: Column(
               children: [
-                const CircleAvatar(
-                  radius: 45,
-                  backgroundImage: AssetImage('assets/images/product/laptop1.png'),
+                GestureDetector(
+                  onTap: () async {
+                    final picker = ImagePicker();
+                    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+                    if (pickedFile != null) {
+                      final bytes = await pickedFile.readAsBytes();
+                      final base64Image = base64Encode(bytes);
+                      print('📤 Ảnh base64 dài: ${base64Image.length}');
+                      final success = await UserService.updateAvatar(CurrentUser().email ?? '', base64Image);
+                      if (success) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Ảnh đại diện đã được cập nhật.")),
+                        );
+                        reloadUserInfo();;
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Không thể cập nhật ảnh.")),
+                        );
+                      }
+                    }
+                  },
+                  child: CircleAvatar(
+                    radius: 45,
+                    backgroundImage: userInfo['avatar'] != null
+                        ? MemoryImage(base64Decode(userInfo['avatar']))
+                        : const AssetImage('assets/images/product/acer/aceracer1.png') as ImageProvider,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -172,8 +199,8 @@ Widget buildInfoRow(IconData icon, String title, String? subtitle, {VoidCallback
   );
 }
 // Info Option
-Widget _buildOptions(BuildContext context) {
-  final int points = 280; // hoặc gọi từ user.loyaltyPoints;
+Widget _buildOptions(BuildContext context, Map<String, dynamic>? userInfo) {
+  final int points = userInfo!['loyalty_point'];
 
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -183,7 +210,7 @@ Widget _buildOptions(BuildContext context) {
         title: const Text('Xem lịch sử đơn hàng'),
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
         onTap: () {
-          context.go('/account/order-histories');
+          context.go('/order-history');
         },
       ),
       const SizedBox(height: 24),
@@ -198,14 +225,6 @@ Widget _buildOptions(BuildContext context) {
           leading: const Icon(Icons.star, color: Colors.orange),
           title: Text('$points điểm'),
           subtitle: const Text('Tích lũy từ các đơn hàng trước'),
-          trailing: points > 0
-              ? TextButton(
-            onPressed: () {
-              // TODO: Quy đổi điểm
-            },
-            child: const Text('Quy đổi'),
-          )
-              : null,
         ),
       ),
       const SizedBox(height: 24),

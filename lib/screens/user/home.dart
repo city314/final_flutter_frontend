@@ -109,21 +109,18 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: CustomNavbar(
         onHomeTap: () {
-          // TODO: Chuyển tới trang chủ
           context.go('/home');
         },
         onCategoriesTap: () {
-          // TODO: Chuyển tới trang categories
+          context.go('/products');
         },
         onCartTap: () {
-          // TODO: Chuyển tới trang giỏ hàng
           context.go('/account/cart');
         },
         onRegisterTap: () {
-          // TODO: Chuyển tới trang đăng ký
+          context.go('/signup');
         },
         onLoginTap: () {
-          // TODO: Chuyển tới trang đăng nhập
           context.go('/');
         },
         onSupportTap: () {
