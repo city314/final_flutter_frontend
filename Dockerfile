@@ -1,8 +1,8 @@
 # Stage 1: Build Flutter Web
-FROM cirrusci/flutter:3.19.6 AS flutterbuilder
-
+FROM ghcr.io/cirruslabs/flutter:stable AS flutterbuilder
 WORKDIR /app
-# Chỉ copy pubspec để tận dụng cache nếu không đổi dependency
+
+# Copy pubspec → tận dụng cache
 COPY pubspec.yaml pubspec.lock ./
 RUN flutter pub get
 
@@ -12,8 +12,5 @@ RUN flutter build web --release
 
 # Stage 2: Serve với nginx
 FROM nginx:1.25.3-alpine
-
-# Copy toàn bộ kết quả build từ stage trước
 COPY --from=flutterbuilder /app/build/web /usr/share/nginx/html
-
 EXPOSE 80
