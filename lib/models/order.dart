@@ -14,6 +14,7 @@ class Order {
   final double tax;
   final double shippingFee;
   final double finalPrice;
+  final double? profit;
   final OrderStatus status;
   final DateTime timeCreate;
   List<OrderDetail>? items;
@@ -29,6 +30,7 @@ class Order {
     required this.tax,
     required this.shippingFee,
     required this.finalPrice,
+    this.profit,
     required this.status,
     required this.timeCreate,
     this.items,
@@ -46,6 +48,7 @@ class Order {
       tax: (json['tax'] ?? 0).toDouble(),
       shippingFee: (json['shipping_fee'] ?? 0).toDouble(),
       finalPrice: (json['final_price'] ?? 0).toDouble(),
+      profit: (json['profit'] ?? 0).toDouble(),
       status: _parseStatus(json['status']),
       timeCreate: DateTime.tryParse(json['time_create'] ?? '') ?? DateTime.now(),
       items: (json['items'] as List?)?.map((e) => OrderDetail.fromJson(e)).toList() ?? [],

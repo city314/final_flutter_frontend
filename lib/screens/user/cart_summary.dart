@@ -126,12 +126,13 @@ class _CheckoutPageState extends State<CartSummary> {
     // Tính toán trước totalPrice, totalDiscount, finalAmount
     double totalPrice = 0;
     double totalDiscount = 0;
-
+    double totalProfit = 0;
     for (var item in widget.selectedItems) {
       final price = item.variant.sellingPrice;
       final discount = item.discount;
       totalPrice += price * item.quantity;
       totalDiscount += price * item.quantity * (discount / 100);
+      totalProfit += (price - item.variant.importPrice) * item.quantity;
     }
 
     final shippingFee = 20000.0;
@@ -370,12 +371,14 @@ class _CheckoutPageState extends State<CartSummary> {
                             // Tính lại total price và total discount hiện tại
                             double totalPrice = 0;
                             double totalDiscount = 0;
+                            double totalProfit = 0;
                             for (var item in widget.selectedItems) {
                               final price = item.variant.sellingPrice;
                               final discount = item.discount;
                               totalPrice += price * item.quantity;
                               totalDiscount +=
                                   price * item.quantity * (discount / 100);
+                              totalProfit += (price - item.variant.importPrice) * item.quantity;
                             }
 
                             double subtotalAfterDiscounts = totalPrice -
@@ -537,12 +540,14 @@ class _CheckoutPageState extends State<CartSummary> {
   void _onConfirmPressed() async {
     double totalPrice = 0;
     double totalDiscount = 0;
+    double totalProfit = 0;
 
     for (var item in widget.selectedItems) {
       final price = item.variant.sellingPrice;
       final discount = item.discount;
       totalPrice += price * item.quantity;
       totalDiscount += price * item.quantity * (discount / 100);
+      totalProfit += (price - item.variant.importPrice) * item.quantity;
     }
 
     final shippingFee = 20000.0;
@@ -604,6 +609,7 @@ class _CheckoutPageState extends State<CartSummary> {
       "tax": tax,
       "shipping_fee": shippingFee,
       "final_price": finalAmount,
+      "profit": totalProfit,
       "status": "pending",
     };
 

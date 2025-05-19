@@ -12,9 +12,43 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  final _nameController = TextEditingController(text: 'Nguyễn Văn A');
-  final _emailController = TextEditingController(text: 'nguyenvana@example.com');
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final phoneController = TextEditingController();
+  TextEditingController birthdayTextController = TextEditingController();
+
+  String selectedGender = '';
+  DateTime? selectedBirthday;
   bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserInfo();
+  }
+
+  Future<void> _loadUserInfo() async {
+    try {
+      final email = CurrentUser().email ?? '';
+      final userData = await UserService.fetchUserByEmail(email);
+
+      setState(() {
+        _nameController.text = userData['name'] ?? '';
+        _emailController.text = userData['email'] ?? '';
+        phoneController.text = userData['phone'] ?? '';
+        selectedGender = userData['gender'] ?? '';
+        selectedBirthday = DateTime.tryParse(userData['birthday'] ?? '');
+        birthdayTextController.text = selectedBirthday != null
+            ? '${selectedBirthday!.day.toString().padLeft(2, '0')}/${selectedBirthday!.month.toString().padLeft(2, '0')}/${selectedBirthday!.year}'
+            : '';
+      });
+    } catch (e) {
+      print('❌ Lỗi load user: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Không thể tải thông tin người dùng')),
+      );
+    }
+  }
 
   void _saveChanges() async {
     final name = _nameController.text.trim();
@@ -30,17 +64,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     setState(() => _isSaving = true);
 
     try {
-      await UserService.updateUserProfile(
-        oldEmail: CurrentUser().email ?? '', // hoặc truyền trực tiếp
+      await UserService.updateUserProfileFull(
+        oldEmail: CurrentUser().email ?? '',
         name: name,
         newEmail: email,
+        gender: selectedGender,
+        birthday: selectedBirthday?.toIso8601String() ?? '',
+        phone: phoneController.text.trim(),
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cập nhật thông tin thành công')),
       );
 
-      Navigator.pop(context);
+      context.pop();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('❌ ${e.toString()}')),
@@ -86,16 +123,64 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     border: OutlineInputBorder(),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 10),
                 TextField(
                   controller: _emailController,
+                  enabled: false,
                   decoration: const InputDecoration(
                     labelText: 'Email',
                     prefixIcon: Icon(Icons.email),
                     border: OutlineInputBorder(),
                   ),
                 ),
-                const SizedBox(height: 30),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  value: selectedGender.isNotEmpty ? selectedGender : null,
+                  decoration: const InputDecoration(
+                    labelText: 'Giới tính',
+                    prefixIcon: Icon(Icons.person_outline),
+                    border: OutlineInputBorder(),
+                  ),
+                  items: ['Male', 'Female']
+                      .map((gender) => DropdownMenuItem(value: gender, child: Text(gender)))
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) selectedGender = value;
+                  },
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: birthdayTextController,
+                  readOnly: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Ngày sinh',
+                    prefixIcon: Icon(Icons.cake),
+                    border: OutlineInputBorder(),
+                  ),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: selectedBirthday ?? DateTime(2000),
+                      firstDate: DateTime(1900),
+                      lastDate: DateTime.now(),
+                    );
+                    if (picked != null) {
+                      setState(() => selectedBirthday = picked);
+                      birthdayTextController.text =
+                      '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
+                    }
+                  },
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: phoneController,
+                  decoration: const InputDecoration(
+                    labelText: 'Số điện thoại',
+                    prefixIcon: Icon(Icons.phone),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
                 ElevatedButton(
                   onPressed: _isSaving ? null : _saveChanges,
                   style: ElevatedButton.styleFrom(

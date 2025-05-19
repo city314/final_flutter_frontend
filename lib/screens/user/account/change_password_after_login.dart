@@ -1,4 +1,9 @@
+import 'package:cpmad_final/pattern/current_user.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../service/UserService.dart';
 
 class ChangePasswordAfterLoginScreen extends StatefulWidget {
   const ChangePasswordAfterLoginScreen({super.key});
@@ -34,17 +39,21 @@ class _ChangePasswordAfterLoginScreenState extends State<ChangePasswordAfterLogi
 
     setState(() => _isLoading = true);
 
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      final email = CurrentUser().email;
+      await UserService.changePassword(email!, oldPassword, newPassword);
 
-    // TODO: Kiểm tra mật khẩu cũ có đúng không (thường sẽ gọi API tại đây)
-
-    setState(() => _isLoading = false);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Đổi mật khẩu thành công')),
-    );
-
-    Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đổi mật khẩu thành công')),
+      );
+      context.pop();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override

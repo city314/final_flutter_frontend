@@ -32,12 +32,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       await UserService.loginUser(email: email, password: password, context: context);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đăng nhập thành công!')),
-      );
-
-      print('Đăng nhập với: $email / $password');
     } catch (e) {
       // Bắt mọi lỗi có thể xảy ra (lỗi mạng, JSON, logic)
       ScaffoldMessenger.of(context).showSnackBar(

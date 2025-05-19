@@ -181,25 +181,31 @@ class UserService {
     if (res.statusCode != 200) throw Exception('Lỗi cập nhật địa chỉ mặc định');
   }
 
-  static Future<void> updateUserProfile({
+  static Future<void> updateUserProfileFull({
     required String oldEmail,
     required String name,
     required String newEmail,
+    required String gender,
+    required String birthday,
+    required String phone,
   }) async {
-    final url = Uri.parse('$_url/update-profile/$oldEmail');
     final response = await http.put(
-      url,
+      Uri.parse('$_url/update-profile/$oldEmail'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'name': name,
         'newEmail': newEmail,
+        'gender': gender,
+        'birthday': birthday,
+        'phone': phone,
       }),
     );
 
     if (response.statusCode != 200) {
-      final data = jsonDecode(response.body);
+      throw Exception(jsonDecode(response.body)['message']);
     }
   }
+
   static Future<List<User>> fetchUsers() async {
     final response = await http.get(Uri.parse('$_url'));
     if (response.statusCode == 200) {
@@ -368,5 +374,23 @@ class UserService {
     );
 
     return response.statusCode == 200;
+  }
+
+  static Future<bool> changePassword(String email, String oldPassword, String newPassword) async {
+    final response = await http.post(
+      Uri.parse('$_url/change-password'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': email,
+        'oldPassword': oldPassword,
+        'newPassword': newPassword,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return true;
+    } else {
+      throw Exception(jsonDecode(response.body)['message']);
+    }
   }
 }
