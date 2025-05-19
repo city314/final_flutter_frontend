@@ -48,6 +48,7 @@ class _ChatScreenState extends State<CustomerSupportScreen> {
 
       // Chỉ nhận tin nhắn nếu là cuộc trò chuyện của user đó
       if (data['customer_email'] == (currentUserRole == 'customer' ? currentEmail : widget.email)) {
+        if (!mounted) return;
         setState(() {
           _messages.add({
             'text': data['text'],

@@ -152,7 +152,7 @@ class _AdminOrderScreenState extends State<AdminOrderScreen> {
             // Section Header
             Padding(
               padding: const EdgeInsets.all(16),
-              child: const SectionHeader('Quản lý Danh mục'),
+              child: const SectionHeader('Quản lý Đơn hàng'),
             ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,

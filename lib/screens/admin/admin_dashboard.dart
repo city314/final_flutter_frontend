@@ -60,6 +60,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     _webSocketService.connect((review) {});
   }
 
+  bool _isDisposed = false;
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
+
   Future<void> _loadDashboardData() async {
     try {
       final users = await UserService.fetchUsers();
@@ -134,7 +142,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       final spots = List<FlSpot>.generate(days, (i) => FlSpot(i.toDouble(), dailyRevenue[i]));
       print(totalSold);
       print(totalStock);
-      setState(() {
+      if (!_isDisposed) setState(() {
         totalUsers = users.length;
         totalProducts = products.length;
         pieSections = sections;

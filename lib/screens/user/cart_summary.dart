@@ -138,7 +138,7 @@ class _CheckoutPageState extends State<CartSummary> {
     final shippingFee = 20000.0;
     final tax = totalPrice * 0.03;
     double finalAmount = totalPrice - totalDiscount - loyalty * 1000 - _voucherDiscount + tax + shippingFee;
-    double finalProfit = totalProfit - finalAmount;
+    double finalProfit = finalAmount - totalProfit ;
     // Xác định layout rộng hay hẹp
     final isWide = MediaQuery.of(context).size.width >= 800;
 
@@ -553,7 +553,7 @@ class _CheckoutPageState extends State<CartSummary> {
     final shippingFee = 20000.0;
     final tax = totalPrice * 0.03;
     double finalAmount = totalPrice - totalDiscount - loyalty * 1000 - _voucherDiscount + tax + shippingFee;
-    double finalProfit = totalProfit - finalAmount;
+    double finalProfit = finalAmount - totalProfit;
     if (!_formKey.currentState!.validate()) return;
 
     final name = _nameCtrl.text.trim();
