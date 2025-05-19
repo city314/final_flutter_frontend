@@ -247,6 +247,7 @@ class ProductService {
     String? sort,
     int skip = 0,
     int limit = 20,
+    String? search,
   }) async {
     final query = {
       if (categoryId != null) 'categoryId': categoryId,
@@ -256,6 +257,7 @@ class ProductService {
       if (sort != null) 'sort': sort,
       'skip': '$skip',
       'limit': '$limit',
+      if (search != null && search.isNotEmpty) 'search': search,
     };
 
     final uri = Uri.parse('$_urlProduct/pagination').replace(queryParameters: query);

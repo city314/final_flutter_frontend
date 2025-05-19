@@ -24,6 +24,7 @@ class ProductList extends StatefulWidget {
 
 class _ProductListState extends State<ProductList> {
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _searchCtrl = TextEditingController();
   List<Product> _products = [];
   bool _isLoading = false;
 
@@ -89,6 +90,7 @@ class _ProductListState extends State<ProductList> {
         price: selectedPrice,
         sort: sortType,
         skip: _skip,
+        search: _searchCtrl.text,
       );
       setState(() {
         _products.addAll(moreProducts);
@@ -103,6 +105,7 @@ class _ProductListState extends State<ProductList> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _searchCtrl.dispose();
     super.dispose();
   }
 
@@ -118,7 +121,10 @@ class _ProductListState extends State<ProductList> {
         onRegisterTap: () {},
         onLoginTap: () {},
         onSupportTap: () {},
-        onSearch: (value) {},
+        onSearch: (value) {
+          _searchCtrl.text = value;
+          _applyFilters(); // ✅ chỉ gọi khi user nhấn icon tìm trên navbar
+        },
       ),
       body: isAndroid
           ? Column(
@@ -127,13 +133,16 @@ class _ProductListState extends State<ProductList> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: TextField(
-                    onChanged: (value) {
-                      // TODO: Xử lý search sản phẩm
-                    },
+                    controller: _searchCtrl,
                     decoration: InputDecoration(
                       hintText: 'Tìm kiếm sản phẩm...',
                       contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 10),
-                      suffixIcon: const Icon(Icons.search, size: 20),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.search, size: 20),
+                        onPressed: () {
+                          _applyFilters(); // chỉ tìm khi bấm
+                        },
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
@@ -171,6 +180,7 @@ class _ProductListState extends State<ProductList> {
                           onChanged: (v) {
                             setState(() {
                               sortType = v!;
+                              _applyFilters(); // Gọi lại filter khi đổi sort
                             });
                           },
                         ),
@@ -337,6 +347,7 @@ class _ProductListState extends State<ProductList> {
                               onChanged: (v) {
                                 setState(() {
                                   sortType = v!;
+                                  _applyFilters(); // Gọi lại filter khi đổi sort
                                 });
                               },
                             ),
@@ -436,50 +447,23 @@ class _ProductListState extends State<ProductList> {
                       style: const TextStyle(color: Colors.blueAccent),
                     ),
                     const SizedBox(height: 4),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () async {
-                          // Lấy userId hiện tại (kể cả guest)
-                          final userId = await CartService.getEffectiveUserId();
-                          // Lấy variantId đầu tiên của sản phẩm (giả sử có ít nhất 1 variant)
-                          String? variantId;
-                          if (product.variants.isNotEmpty) {
-                            variantId = product.variants.first.id;
-                          }
-                          if (variantId == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Sản phẩm chưa có biến thể!')),
-                            );
-                            return;
-                          }
-                          try {
-                            await CartService.updateCartItem(
-                              userId: userId,
-                              variantId: variantId,
-                              quantity: 1,
-                            );
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Đã thêm vào giỏ hàng!')),
-                            );
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Lỗi thêm vào giỏ hàng: $e')),
-                            );
-                          }
-                        },
-                        icon: const Icon(Icons.add_shopping_cart, size: 18),
-                        label: const Text('Thêm vào giỏ hàng', style: TextStyle(fontSize: 14)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blueAccent,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                    if (product.averageRating != null && product.averageRating! > 0)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          ...List.generate(
+                            product.averageRating!.round(),
+                                (_) => const Icon(Icons.star, size: 14, color: Colors.amber),
                           ),
-                        ),
+                          if (product.averageRating! % 1 != 0)
+                            const Icon(Icons.star_half, size: 14, color: Colors.amber),
+                          const SizedBox(width: 4),
+                          Text(
+                            product.averageRating!.toStringAsFixed(1),
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ],
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -621,6 +605,7 @@ class _ProductListState extends State<ProductList> {
         rating: selectedRating,
         sort: sortType,
         skip: 0,
+        search: _searchCtrl.text,
       );
       setState(() {
         _products = filtered;

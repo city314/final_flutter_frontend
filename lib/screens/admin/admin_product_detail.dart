@@ -9,7 +9,6 @@ import 'package:cpmad_final/models/brand.dart';
 import 'package:cpmad_final/models/variant.dart';
 import 'package:go_router/go_router.dart';
 import '../../service/ProductService.dart';
-import 'component/variant_detail.dart';
 import '../../utils/format_utils.dart';
 
 // TODO: replace with dynamic data sources
@@ -36,9 +35,8 @@ class _AdminProductDetailState extends State<AdminProductDetail> {
   final List<Category> categories = [];
   final List<Brand> brands = [];
   List<Variant> _variants = [];
-
+  int get _totalStock => _variants.fold(0, (sum, v) => sum + (v.stock ?? 0));
   late TextEditingController _nameCtrl;
-  late TextEditingController _stockCtrl;
   late TextEditingController _descCtrl;
 
   late Category _selectedCategory;
@@ -47,7 +45,6 @@ class _AdminProductDetailState extends State<AdminProductDetail> {
   List<PlatformFile> _editingVariantImages = [];
   int? _editingIndex;
 
-  @override
   @override
   void initState() {
     super.initState();
@@ -73,7 +70,6 @@ class _AdminProductDetailState extends State<AdminProductDetail> {
           ..addAll(brs);
 
         _nameCtrl = TextEditingController(text: p.name);
-        _stockCtrl = TextEditingController(text: p.stock.toString());
         _descCtrl = TextEditingController(text: p.description);
 
         _variants = fetchedVariants; // ✅ chỉ dùng kết quả fetch
@@ -103,7 +99,6 @@ class _AdminProductDetailState extends State<AdminProductDetail> {
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _stockCtrl.dispose();
     _descCtrl.dispose();
     super.dispose();
   }
@@ -287,7 +282,7 @@ class _AdminProductDetailState extends State<AdminProductDetail> {
       name: _nameCtrl.text.trim(),
       categoryId: _selectedCategory.id!,
       brandId: _selectedBrand.id!,
-      stock: int.tryParse(_stockCtrl.text) ?? widget.product.stock,
+      stock: _totalStock,
       description: _descCtrl.text.trim(),
       images: imageBase64List,
       timeAdd: widget.product.timeAdd,
@@ -423,24 +418,6 @@ class _AdminProductDetailState extends State<AdminProductDetail> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _stockCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Kho',
-                              border: OutlineInputBorder(),
-                            ),
-                            keyboardType: TextInputType.number,
-                            validator: (v) => int.tryParse(v!) == null ? 'Kho không hợp lệ' : null,
-                          ),
-                        ),
-                      ],
-                    ),
-
                     const SizedBox(height: 20),
 
                     // Image Picker

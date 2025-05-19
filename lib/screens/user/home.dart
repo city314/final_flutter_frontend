@@ -131,8 +131,9 @@ class _HomeScreenState extends State<HomeScreen> {
         } : null,
         onLogoutTap: isAndroid ? () {
           setState(() {
-            CurrentUser().isLogin = false;
+            CurrentUser().logout();
           });
+          context.go('/');
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Đã đăng xuất')),
           );
@@ -879,7 +880,8 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
                     leading: const Icon(Icons.logout),
                     title: const Text('Đăng xuất'),
                     onTap: () {
-                      Navigator.pop(context);
+                      CurrentUser().logout();
+                      context.go('/');
                       if (onLogoutTap != null) onLogoutTap!();
                     },
                   ),

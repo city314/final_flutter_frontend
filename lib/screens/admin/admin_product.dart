@@ -144,7 +144,7 @@ class _AdminProductScreenState extends State<AdminProductScreen> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    
+
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(20),
@@ -275,8 +275,6 @@ class _AdminProductScreenState extends State<AdminProductScreen> {
               const SizedBox(height: 8),
               Text('Giá: ${formatPrice((p.lowestPrice ?? 0).toDouble())}',
                   style: const TextStyle(fontSize: 14, color: Colors.green)),
-              const SizedBox(height: 8),
-              Text('Kho: ${p.stock}', style: const TextStyle(fontSize: 12)),
               const SizedBox(height: 12),  // cách trước ButtonBar
               Text('Biến thể: ${p.variantCount}',
                   style: const TextStyle(fontSize: 12, color: Colors.black54)),
@@ -393,15 +391,14 @@ class _AdminProductScreenState extends State<AdminProductScreen> {
                     constraints: BoxConstraints(minWidth: screenWidth),
                     child: DataTable(
                       columnSpacing: 24,
-                      headingRowColor: MaterialStateProperty.resolveWith<Color?>(
-                            (states) => Theme.of(context).colorScheme.onSurface.withOpacity(0.04),
+                      headingRowColor: WidgetStateProperty.resolveWith<Color?>(
+                            (states) => Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.04),
                       ),
                       columns: const [
                         DataColumn(label: Text('Tên sản phẩm')),
                         DataColumn(label: Text('Thương hiệu')),
                         DataColumn(label: Text('Danh mục')),
                         DataColumn(label: Text('Giá')),
-                        DataColumn(label: Text('Số lượng')),
                         DataColumn(label: Text('Thao tác')),
                       ],
                       rows: _filteredProducts.map((p) {
@@ -422,7 +419,6 @@ class _AdminProductScreenState extends State<AdminProductScreen> {
                           DataCell(Text(brandName)),
                           DataCell(Text(categoryName)),
                           DataCell(Text(priceText)),
-                          DataCell(Text(p.stock.toString())),
                           DataCell(Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [

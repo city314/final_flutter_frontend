@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'variant.dart';
 
 class Product {
@@ -17,7 +15,8 @@ class Product {
   int? soldCount;
   final List<Map<String, String>> images;
   final DateTime timeAdd;
-  final List<Variant> variants;      // ← thêm trường này
+  final List<Variant> variants;
+  final double? averageRating;
 
   Product({
     this.id,
@@ -35,6 +34,7 @@ class Product {
     required this.images,
     required this.timeAdd,
     this.variants = const [],
+    this.averageRating,
   });
 
   factory Product.fromJson(Map<String, dynamic> json) => Product(
@@ -56,6 +56,9 @@ class Product {
     variants: (json['variants'] as List<dynamic>?)
         ?.map((e) => Variant.fromJson(e as Map<String, dynamic>))
         .toList() ?? [],
+    averageRating: (json['averageRating'] != null)
+        ? (json['averageRating'] as num).toDouble()
+        : null,
   );
 
   Map<String, dynamic> toJson() {
@@ -67,6 +70,7 @@ class Product {
       'stock': stock,
       'images': images,
       'variants': variants.map((v) => v.toJson()).toList(),
+      'averageRating': averageRating,
     };
     if (id != null) m['_id'] = id;
     return m;

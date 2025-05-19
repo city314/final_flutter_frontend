@@ -121,6 +121,8 @@ class _UserCartPageState extends State<UserCartPage> {
         onLogoutTap: isAndroid ? () {
           setState(() {
             isLoggedIn = false;
+            CurrentUser().logout();
+            context.go('/');
           });
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Đã đăng xuất')),

@@ -2,7 +2,7 @@ import 'package:cpmad_final/pattern/current_user.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
+class CustomNavbar extends StatefulWidget implements PreferredSizeWidget {
   final int cartItemCount;
   final VoidCallback onHomeTap;
   final VoidCallback onCategoriesTap;
@@ -34,11 +34,19 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
   Size get preferredSize => const Size.fromHeight(60);
 
   @override
+  State<CustomNavbar> createState() => _CustomNavbarState();
+}
+
+class _CustomNavbarState extends State<CustomNavbar> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 400;
     final isSmallScreen = screenWidth < 600;
     final isAndroid = Theme.of(context).platform == TargetPlatform.android;
+
     return AppBar(
       backgroundColor: const Color(0xFF43A7C6),
       elevation: 0,
@@ -52,11 +60,18 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
           if (!isMobile && !isAndroid)
             Expanded(
               child: TextField(
-                onChanged: onSearch,
+                controller: _searchController,
+                onSubmitted: widget.onSearch,
                 decoration: InputDecoration(
                   hintText: 'search',
                   contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 10),
-                  suffixIcon: const Icon(Icons.search, size: 20),
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.search, size: 20),
+                    onPressed: () {
+                      final text = _searchController.text.trim();
+                      if (text.isNotEmpty) widget.onSearch(text);
+                    },
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
@@ -68,20 +83,20 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
           if (!isMobile) ...[
             SizedBox(width: isSmallScreen ? 8 : 20),
             TextButton(
-              onPressed: onHomeTap,
+              onPressed: widget.onHomeTap,
               child: const Text('HOME', style: TextStyle(color: Colors.black)),
             ),
             TextButton(
-              onPressed: onCategoriesTap,
+              onPressed: widget.onCategoriesTap,
               child: const Text('CATEGORIES', style: TextStyle(color: Colors.black)),
             ),
             TextButton(
-              onPressed: onCartTap,
+              onPressed: widget.onCartTap,
               child: Row(
                 children: [
                   const Text('CART', style: TextStyle(color: Colors.black)),
                   const SizedBox(width: 4),
-                  Text('$cartItemCount', style: const TextStyle(color: Colors.black)),
+                  Text('${widget.cartItemCount}', style: const TextStyle(color: Colors.black)),
                 ],
               ),
             ),
@@ -98,7 +113,7 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
                     title: const Text('Home'),
                     onTap: () {
                       context.go('');
-                      onHomeTap();
+                      widget.onHomeTap();
                     },
                   ),
                 ),
@@ -109,7 +124,7 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
                     title: const Text('Categories'),
                     onTap: () {
                       Navigator.pop(context);
-                      onCategoriesTap();
+                      widget.onCategoriesTap();
                     },
                   ),
                 ),
@@ -120,7 +135,7 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
                     title: const Text('Cart'),
                     onTap: () {
                       Navigator.pop(context);
-                      onCartTap();
+                      widget.onCartTap();
                     },
                   ),
                 ),
@@ -133,7 +148,7 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
                     title: const Text('Xem profile'),
                     onTap: () {
                       Navigator.pop(context);
-                      if (onProfileTap != null) onProfileTap!();
+                      if (widget.onProfileTap != null) widget.onProfileTap!();
                     },
                   ),
                 ),
@@ -143,8 +158,9 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
                     leading: const Icon(Icons.logout),
                     title: const Text('Đăng xuất'),
                     onTap: () {
-                      Navigator.pop(context);
-                      if (onLogoutTap != null) onLogoutTap!();
+                      CurrentUser().logout();
+                      context.go('/');
+                      if (widget.onLogoutTap != null) widget.onLogoutTap!();
                     },
                   ),
                 ),
@@ -156,7 +172,7 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
                     title: const Text('Register'),
                     onTap: () {
                       Navigator.pop(context);
-                      onRegisterTap();
+                      widget.onRegisterTap();
                     },
                   ),
                 ),
@@ -167,18 +183,18 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
                     title: const Text('Login'),
                     onTap: () {
                       Navigator.pop(context);
-                      onLoginTap();
+                      widget.onLoginTap();
                     },
                   ),
                 ),
                 PopupMenuItem(
                   value: 3,
                   child: ListTile(
-                    leading: const Icon(Icons.login),
+                    leading: const Icon(Icons.support_agent),
                     title: const Text('Support'),
                     onTap: () {
                       Navigator.pop(context);
-                      onSupportTap();
+                      widget.onSupportTap();
                     },
                   ),
                 ),

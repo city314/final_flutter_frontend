@@ -9,6 +9,7 @@ import 'dart:io' show Platform;
 import '../../models/product.dart';
 import '../../models/review.dart';
 import '../../models/selectedproduct.dart';
+import '../../service/AnalysisAI.dart';
 import '../../service/CartService.dart';
 import '../../service/ProductService.dart';
 import '../../service/UserService.dart';
@@ -511,7 +512,12 @@ class _ProductDetailState extends State<ProductDetailScreen> {
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () async {
-                      if (selectedVariant == null) return;
+                      if (selectedVariant == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Vui lòng chọn 1 mẫu sản phẩm')),
+                        );
+                        return;
+                      };
                       try {
                         final cartExists = await CartService.isCartCreated();
                         final userId = await CartService.getEffectiveUserId();
@@ -1066,7 +1072,12 @@ class _ProductDetailState extends State<ProductDetailScreen> {
                             children: [
                               ElevatedButton.icon(
                                 onPressed: () async {
-                                  if (selectedVariant == null) return;
+                                  if (selectedVariant == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Vui lòng chọn 1 mẫu sản phẩm')),
+                                    );
+                                    return;
+                                  };
                                   try {
                                     final cartExists = await CartService.isCartCreated();
                                     final userId = await CartService.getEffectiveUserId();
@@ -1250,16 +1261,19 @@ class _ProductDetailState extends State<ProductDetailScreen> {
                         const Text("Bạn cần đăng nhập để đánh giá sao.", style: TextStyle(color: Colors.orange)),
                       ],
                       ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
                           final isLoggedIn = CurrentUser().isLogin;
+                          final reviewText = _commentController.text;
+                          final aiResult = await getSentimentAnalysis(reviewText);
+
                           final review = Review(
-                            productId: widget.productId,
-                            userId: isLoggedIn ? userInfo!['email'] ?? '' : '',
-                            userName: isLoggedIn ? userInfo!['name'] ?? 'Ẩn danh' : 'Ẩn danh',
-                            rating: isLoggedIn ? _rating : 0,
-                            comment: _commentController.text,
-                            timeCreate: DateTime.now(),
-                            avatar: isLoggedIn ? userInfo!['avatar'] : ''
+                              productId: widget.productId,
+                              userId: isLoggedIn ? userInfo!['email'] ?? '' : '',
+                              userName: isLoggedIn ? userInfo!['name'] ?? 'Ẩn danh' : 'Ẩn danh',
+                              rating: isLoggedIn ? _rating : 0,
+                              comment: reviewText + '\n\n🤖 AI Nhận xét: ${aiResult['sentiment']}\n👉 ${aiResult['explanation']}',
+                              timeCreate: DateTime.now(),
+                              avatar: isLoggedIn ? userInfo!['avatar'] : ''
                           );
 
                           ProductService.postReview(review);
@@ -1390,7 +1404,41 @@ class _ProductDetailState extends State<ProductDetailScreen> {
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text(comment, style: const TextStyle(fontSize: 15)),
+                Text.rich(
+                  TextSpan(
+                    children: comment.split('\n').map((line) {
+                      final trimmed = line.trim();
+                      if (trimmed.startsWith('🤖')) {
+                        return TextSpan(
+                          text: '$line\n',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            fontStyle: FontStyle.italic,
+                            color: Colors.deepPurple,
+                          ),
+                        );
+                      } else if (trimmed.startsWith('👉')) {
+                        return TextSpan(
+                          text: '$line\n',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontStyle: FontStyle.italic,
+                            color: Colors.grey,
+                          ),
+                        );
+                      } else {
+                        return TextSpan(
+                          text: '$line\n',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            color: Colors.black87,
+                          ),
+                        );
+                      }
+                    }).toList(),
+                  ),
+                )
               ],
             ),
           ),
