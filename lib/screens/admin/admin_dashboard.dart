@@ -2,6 +2,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
 import '../../models/product.dart';
 import 'component/SectionHeader.dart';
 import '../../service/ProductService.dart';
@@ -43,15 +44,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     Colors.pink,
   ];
   final ProductService _productService = ProductService();
-  final UserService _userService = UserService();
-  final OrderService _orderService = OrderService();
-  final CartService _cartService = CartService();
   final WebSocketService _webSocketService = WebSocketService();
 
   final List<String> ranges = [
     'Hôm nay', 'Tuần này', 'Tháng này', 'Quý này', 'Năm nay', 'Tùy chỉnh'
   ];
   String selectedRange = 'Tháng này';
+  DateTime? _startDate;
+  DateTime? _endDate;
 
   @override
   void initState() {
@@ -66,7 +66,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       final products = await ProductService.fetchAllProducts();
       final orders = await OrderService.fetchAllOrders();
       final categories = await ProductService.fetchAllCategory();
-      final categoryMap = <String, int>{};
 
       totalStock = 0;
       totalSold = 0;
@@ -78,24 +77,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         totalSold += p.soldCount ?? 0;
       }
 
-      for (var order in orders) {
-        for (var item in order.items ?? []) {
-          Product? product;
-          for (var p in products) {
-            if (p.variants.any((v) => v.id == item.productId)) {
-              product = p;
-              break;
-            }
-          }
-
-          if (product != null && product.categoryName != null) {
-            final category = product.categoryName!;
-            print(category);
-            categoryMap[category] = (categoryMap[category] ?? 0) + item.quantity as int;
-          }
-        }
-      }
       final now = DateTime.now();
+      _endDate = now;
       DateTime start;
       switch (selectedRange) {
         case 'Hôm nay': start = DateTime(now.year, now.month, now.day); break;
@@ -108,10 +91,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         case 'Năm nay': start = DateTime(now.year, 1, 1); break;
         default: start = DateTime(now.year, now.month, now.day);
       }
-
+      _startDate = start;
       final filteredOrders = orders.where((o) {
-        return o.timeCreate.isAfter(start.subtract(Duration(seconds: 1))) &&
-            o.timeCreate.isBefore(now.add(Duration(seconds: 1)));
+        return o.timeCreate.isAfter(start) && o.timeCreate.isBefore(now);
       }).toList();
 
       double revenue = 0.0;
@@ -161,7 +143,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         totalProfit = profit;
         totalQuantitySold = quantity;
         _ordersList = filteredOrders;
-        _categorySales = categoryMap;
         _spots = spots;
       });
     } catch (e, stack) {
@@ -180,6 +161,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         Widget content = Column(
           children: [
             _buildHeader(),
+            if (_startDate != null && _endDate != null)
+              Text(
+                'Từ ${DateFormat('dd/MM/yyyy').format(_startDate!)} đến ${DateFormat('dd/MM/yyyy').format(_endDate!)}',
+                style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+              ),
             const SizedBox(height: 16),
             _buildOverviewGrid(crossAxisCount: isMobile ? 1 : isTablet ? 2 : 4),
             const SizedBox(height: 32),
@@ -190,8 +176,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             _buildChartCard('📋 So sánh: Doanh thu - Lợi nhuận', _buildComparisonChart()),
             const SizedBox(height: 32),
             _buildChartCard('🗓 Doanh thu & Lợi nhuận theo tháng', _buildRevenueProfitBarChart('month')),
-            const SizedBox(height: 32),
-            _buildChartCard('🏆 Top danh mục bán chạy', _buildTopCategoryChart(_categorySales)),
             const SizedBox(height: 32),
             _buildChartCard('📦 So sánh tồn kho & sản phẩm đã bán', _buildProductStockSoldChart()),
 
@@ -479,33 +463,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       ),
     );
   }
-
-  Widget _buildTopCategoryChart(Map<String, int> categorySales) {
-    final sorted = categorySales.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    final top5 = sorted.take(5).toList();
-
-    return BarChart(
-      BarChartData(
-        titlesData: FlTitlesData(
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-                getTitlesWidget: (x, _) {
-                  final index = x.toInt();
-                  if (index < 0 || index >= top5.length) return const SizedBox.shrink();
-                  return Text(top5[index].key, style: const TextStyle(fontSize: 10));
-                }
-            ),
-          ),
-        ),
-        barGroups: List.generate(top5.length, (i) => BarChartGroupData(x: i, barRods: [
-          BarChartRodData(toY: top5[i].value.toDouble(), color: Colors.orange, width: 8)
-        ])),
-      ),
-    );
-  }
-
 }
 
 class _DashboardCard extends StatelessWidget {
