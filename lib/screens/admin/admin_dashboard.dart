@@ -2,6 +2,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../../models/product.dart';
 import 'component/SectionHeader.dart';
 import '../../service/ProductService.dart';
 import '../../service/UserService.dart';
@@ -26,7 +27,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int totalQuantitySold = 0;
   List<Order> _ordersList = [];
   List<FlSpot> _spots = [];
+  int totalStock = 0;
+  int totalSold = 0;
+
   List<PieChartSectionData> pieSections = [];
+  Map<String, int> _categorySales = {};
   final List<Color> _pieColors = [
     Colors.blue,
     Colors.orange,
@@ -61,7 +66,35 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       final products = await ProductService.fetchAllProducts();
       final orders = await OrderService.fetchAllOrders();
       final categories = await ProductService.fetchAllCategory();
+      final categoryMap = <String, int>{};
 
+      totalStock = 0;
+      totalSold = 0;
+      for (var p in products) {
+        final variants = await ProductService.fetchVariantsByProduct(p.id ?? '');
+        for (var v in variants) {
+          totalStock += v.stock ?? 0;
+        }
+        totalSold += p.soldCount ?? 0;
+      }
+
+      for (var order in orders) {
+        for (var item in order.items ?? []) {
+          Product? product;
+          for (var p in products) {
+            if (p.variants.any((v) => v.id == item.productId)) {
+              product = p;
+              break;
+            }
+          }
+
+          if (product != null && product.categoryName != null) {
+            final category = product.categoryName!;
+            print(category);
+            categoryMap[category] = (categoryMap[category] ?? 0) + item.quantity as int;
+          }
+        }
+      }
       final now = DateTime.now();
       DateTime start;
       switch (selectedRange) {
@@ -86,7 +119,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       int quantity = 0;
 
       for (var o in filteredOrders) {
-        revenue += o.totalPrice;
+        revenue += o.finalPrice;
         profit += o.profit!;
         for (var item in o.items ?? []) {
           quantity += item.quantity as int;
@@ -117,7 +150,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         }
       }
       final spots = List<FlSpot>.generate(days, (i) => FlSpot(i.toDouble(), dailyRevenue[i]));
-
+      print(totalSold);
+      print(totalStock);
       setState(() {
         totalUsers = users.length;
         totalProducts = products.length;
@@ -127,6 +161,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         totalProfit = profit;
         totalQuantitySold = quantity;
         _ordersList = filteredOrders;
+        _categorySales = categoryMap;
         _spots = spots;
       });
     } catch (e, stack) {
@@ -152,7 +187,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             const SizedBox(height: 32),
             _buildChartCard('📊 Tỷ lệ loại sản phẩm bán chạy', _buildPieChart()),
             const SizedBox(height: 32),
-            _buildChartCard('📋 So sánh: Doanh thu - Lợi nhuận - SL bán', _buildComparisonChart()),
+            _buildChartCard('📋 So sánh: Doanh thu - Lợi nhuận', _buildComparisonChart()),
+            const SizedBox(height: 32),
+            _buildChartCard('🗓 Doanh thu & Lợi nhuận theo tháng', _buildRevenueProfitBarChart('month')),
+            const SizedBox(height: 32),
+            _buildChartCard('🏆 Top danh mục bán chạy', _buildTopCategoryChart(_categorySales)),
+            const SizedBox(height: 32),
+            _buildChartCard('📦 So sánh tồn kho & sản phẩm đã bán', _buildProductStockSoldChart()),
+
+
           ],
         );
 
@@ -167,12 +210,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildComparisonChart() {
+    if (totalRevenue.isNaN || totalProfit.isNaN || totalQuantitySold.isNaN) {
+      return const Text('Dữ liệu không hợp lệ');
+    }
+
     return BarChart(
       BarChartData(
         barGroups: [
           BarChartGroupData(x: 0, barRods: [BarChartRodData(toY: totalRevenue, color: Colors.blue)], showingTooltipIndicators: [0]),
           BarChartGroupData(x: 1, barRods: [BarChartRodData(toY: totalProfit, color: Colors.green)], showingTooltipIndicators: [0]),
-          BarChartGroupData(x: 2, barRods: [BarChartRodData(toY: totalQuantitySold.toDouble(), color: Colors.orange)], showingTooltipIndicators: [0]),
         ],
         titlesData: FlTitlesData(
           bottomTitles: AxisTitles(
@@ -182,7 +228,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 switch (value.toInt()) {
                   case 0: return const Text('Doanh thu');
                   case 1: return const Text('Lợi nhuận');
-                  case 2: return const Text('SL Bán');
                   default: return const SizedBox();
                 }
               },
@@ -264,6 +309,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildLineChart() {
+    if (_spots.isEmpty || _spots.any((e) => e.y.isNaN)) {
+      return const Center(child: Text('Không có dữ liệu hiển thị'));
+    }
+
     final maxY = _spots.isNotEmpty ? _spots.map((e) => e.y).reduce(max) * 1.2 : 5.0;
     final double gridInterval = maxY > 0.0 ? maxY / 4.0 : 1.0;
 
@@ -328,6 +377,39 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  Widget _buildProductStockSoldChart() {
+    return BarChart(
+      BarChartData(
+        barGroups: [
+          BarChartGroupData(x: 0, barRods: [
+            BarChartRodData(toY: totalStock.toDouble(), color: Colors.blue, width: 10)
+          ]),
+          BarChartGroupData(x: 1, barRods: [
+            BarChartRodData(toY: totalSold.toDouble(), color: Colors.green, width: 10)
+          ]),
+        ],
+        titlesData: FlTitlesData(
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (value, _) {
+                switch (value.toInt()) {
+                  case 0: return const Text("Tồn kho");
+                  case 1: return const Text("Đã bán");
+                  default: return const SizedBox();
+                }
+              },
+            ),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(showTitles: true, reservedSize: 40),
+          ),
+        ),
+        borderData: FlBorderData(show: false),
+      ),
+    );
+  }
+
   Widget _buildPieChart() {
     if (pieSections.isEmpty) {
       return const Center(child: CircularProgressIndicator());
@@ -338,6 +420,92 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       sections: pieSections,
     ));
   }
+
+  Map<String, double> _aggregateByInterval(List<Order> orders, String type, {bool onlyRevenue = false}) {
+    final now = DateTime.now();
+    final out = <String, double>{};
+
+    for (var o in orders) {
+      DateTime dt = o.timeCreate;
+      String key;
+
+      switch (type) {
+        case 'year':
+          key = '${dt.year}';
+          break;
+        case 'quarter':
+          final q = ((dt.month - 1) ~/ 3) + 1;
+          key = '${dt.year}-Q$q';
+          break;
+        case 'month':
+          key = '${dt.year}-${dt.month.toString().padLeft(2, '0')}';
+          break;
+        case 'week':
+          final w = ((dt.day - 1) ~/ 7) + 1;
+          key = '${dt.year}-W$w';
+          break;
+        default:
+          key = '${dt.year}-${dt.month}-${dt.day}';
+      }
+
+      final value = onlyRevenue ? o.totalPrice : o.profit ?? 0;
+      out[key] = (out[key] ?? 0) + value;
+    }
+
+    return out;
+  }
+
+  Widget _buildRevenueProfitBarChart(String intervalType) {
+    final map = _aggregateByInterval(_ordersList, intervalType, onlyRevenue: true);
+    return BarChart(
+      BarChartData(
+        titlesData: FlTitlesData(
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (x, _) {
+                final key = map.keys.elementAt(x.toInt().clamp(0, map.length - 1));
+                return Text(key, style: const TextStyle(fontSize: 10));
+              },
+            ),
+          ),
+        ),
+        barGroups: List.generate(map.length, (i) {
+          return BarChartGroupData(x: i, barsSpace: 4, barRods: [
+            BarChartRodData(toY: totalRevenue, color: Colors.blue, width: 8),
+            BarChartRodData(toY: totalProfit, color: Colors.green, width: 8),
+          ]);
+        }),
+      ),
+    );
+  }
+
+  Widget _buildTopCategoryChart(Map<String, int> categorySales) {
+    final sorted = categorySales.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final top5 = sorted.take(5).toList();
+
+    return BarChart(
+      BarChartData(
+        titlesData: FlTitlesData(
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+                getTitlesWidget: (x, _) {
+                  final index = x.toInt();
+                  if (index < 0 || index >= top5.length) return const SizedBox.shrink();
+                  return Text(top5[index].key, style: const TextStyle(fontSize: 10));
+                }
+            ),
+          ),
+        ),
+        barGroups: List.generate(top5.length, (i) => BarChartGroupData(x: i, barRods: [
+          BarChartRodData(toY: top5[i].value.toDouble(), color: Colors.orange, width: 8)
+        ])),
+      ),
+    );
+  }
+
 }
 
 class _DashboardCard extends StatelessWidget {

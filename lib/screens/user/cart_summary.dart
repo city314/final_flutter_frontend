@@ -132,13 +132,13 @@ class _CheckoutPageState extends State<CartSummary> {
       final discount = item.discount;
       totalPrice += price * item.quantity;
       totalDiscount += price * item.quantity * (discount / 100);
-      totalProfit += (price - item.variant.importPrice) * item.quantity;
+      totalProfit += (item.variant.importPrice) * item.quantity;
     }
 
     final shippingFee = 20000.0;
     final tax = totalPrice * 0.03;
     double finalAmount = totalPrice - totalDiscount - loyalty * 1000 - _voucherDiscount + tax + shippingFee;
-
+    double finalProfit = totalProfit - finalAmount;
     // Xác định layout rộng hay hẹp
     final isWide = MediaQuery.of(context).size.width >= 800;
 
@@ -378,7 +378,7 @@ class _CheckoutPageState extends State<CartSummary> {
                               totalPrice += price * item.quantity;
                               totalDiscount +=
                                   price * item.quantity * (discount / 100);
-                              totalProfit += (price - item.variant.importPrice) * item.quantity;
+                              totalProfit += (item.variant.importPrice) * item.quantity;
                             }
 
                             double subtotalAfterDiscounts = totalPrice -
@@ -547,12 +547,13 @@ class _CheckoutPageState extends State<CartSummary> {
       final discount = item.discount;
       totalPrice += price * item.quantity;
       totalDiscount += price * item.quantity * (discount / 100);
-      totalProfit += (price - item.variant.importPrice) * item.quantity;
+      totalProfit += (item.variant.importPrice) * item.quantity;
     }
 
     final shippingFee = 20000.0;
     final tax = totalPrice * 0.03;
     double finalAmount = totalPrice - totalDiscount - loyalty * 1000 - _voucherDiscount + tax + shippingFee;
+    double finalProfit = totalProfit - finalAmount;
     if (!_formKey.currentState!.validate()) return;
 
     final name = _nameCtrl.text.trim();
@@ -609,7 +610,7 @@ class _CheckoutPageState extends State<CartSummary> {
       "tax": tax,
       "shipping_fee": shippingFee,
       "final_price": finalAmount,
-      "profit": totalProfit,
+      "profit": finalProfit,
       "status": "pending",
     };
 
